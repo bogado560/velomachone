@@ -3,234 +3,223 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeloMatch Pro</title>
+    <title>VeloMatch Premium</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #ffffff; --primary: #adff2f; --dim: #888; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        :root { --bg: #0a0a0a; --card: #151515; --primary: #adff2f; --accent: #ff4757; --text: #eee; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Login */
-        .modal { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: var(--card); padding: 30px; border-radius: 24px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 0 20px rgba(173,255,47,0.1); }
+        /* Modales */
+        .modal { position: fixed; inset: 0; background: var(--bg); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .box { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 340px; text-align: center; border: 1px solid #222; }
         
-        input, select { width: 100%; padding: 14px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; background: #000; color: #fff; font-size: 1rem; box-sizing: border-box; }
-        .btn { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 12px; font-weight: bold; color: #000; cursor: pointer; transition: 0.2s; }
-        .btn:active { transform: scale(0.98); }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 5px; }
+        .btn-p { background: var(--primary); color: #000; }
+        .btn-s { background: #222; color: #fff; }
 
-        /* App Bar */
-        header { padding: 15px 20px; background: var(--card); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
-        .status { font-size: 0.75rem; color: var(--primary); background: rgba(173,255,47,0.1); padding: 4px 10px; border-radius: 20px; }
-
-        /* Views */
+        /* Vistas */
         .view { display: none; flex-grow: 1; overflow-y: auto; padding: 15px; padding-bottom: 90px; }
         .view.active { display: block; }
         
-        /* Mapa */
-        #map { height: 300px; border-radius: 20px; background: #111; border: 1px solid #333; margin-bottom: 15px; }
+        #map { height: 350px; border-radius: 15px; background: #111; margin-bottom: 10px; width: 100%; border: 1px solid #333; }
+        
+        /* Estilo Market */
+        .p-card { background: var(--card); border-radius: 15px; padding: 12px; margin-bottom: 12px; border: 1px solid #222; }
+        .p-card img { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; }
+        .like-btn { color: var(--accent); background: none; border: none; font-size: 1.2rem; cursor: pointer; float: right; }
 
-        /* Marketplace */
-        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .p-card { background: var(--card); border-radius: 15px; padding: 10px; border: 1px solid #222; }
-        .p-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
-        .p-card h4 { margin: 5px 0; font-size: 0.9rem; }
-        .p-card span { color: var(--primary); font-weight: bold; }
+        /* Grabación */
+        .recording-bar { background: var(--accent); color: white; padding: 10px; border-radius: 10px; text-align: center; display: none; margin-bottom: 10px; }
 
-        /* Chat */
-        .chat-cont { background: #000; height: calc(100vh - 250px); border-radius: 15px; padding: 15px; overflow-y: auto; margin-bottom: 10px; }
-        .msg { background: var(--card); padding: 10px; border-radius: 12px; margin-bottom: 8px; font-size: 0.9rem; }
-
-        /* Nav */
-        .nav { position: fixed; bottom: 0; width: 100%; height: 75px; background: rgba(26,26,26,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; }
-        .nav-btn { background: none; border: none; color: var(--dim); font-size: 1.2rem; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .nav-btn.active { color: var(--primary); }
-        .nav-btn span { font-size: 0.6rem; font-weight: bold; }
+        .nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: #111; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; }
+        .nav-i { background: none; border: none; color: #555; font-size: 1.2rem; text-align: center; width: 33%; }
+        .nav-i.active { color: var(--primary); }
     </style>
 </head>
 <body>
 
 <div id="login-modal" class="modal">
-    <div class="login-box">
-        <div style="font-size: 3rem; margin-bottom: 10px;">🚲</div>
-        <h2 style="margin: 0;">VeloMatch</h2>
-        <p style="color: var(--dim); margin-bottom: 20px;">Tu comunidad ciclista</p>
-        <input type="text" id="user-name" placeholder="Usuario">
+    <div class="box">
+        <i class="fas fa-bicycle" style="font-size: 3rem; color: var(--primary);"></i>
+        <h2>VeloMatch</h2>
+        <input type="text" id="user-name" placeholder="Tu nombre">
         <select id="user-country">
-            <option value="" disabled selected>País</option>
             <option value="🇦🇷 Argentina">Argentina</option>
-            <option value="🇨🇱 Chile">Chile</option>
-            <option value="🇨🇴 Colombia">Colombia</option>
-            <option value="🇪🇸 España">España</option>
             <option value="🇲🇽 México">México</option>
+            <option value="🇪🇸 España">España</option>
+            <option value="🇨🇴 Colombia">Colombia</option>
         </select>
-        <button class="btn" id="login-btn">INICIAR SESIÓN</button>
+        <button class="btn btn-p" id="login-btn">INICIAR SESIÓN</button>
     </div>
 </div>
 
-<header>
-    <div style="font-weight: 800; letter-spacing: -1px;">VELOMATCH</div>
-    <div id="user-display" class="status">Cargando...</div>
+<header style="padding: 15px; font-weight: bold; border-bottom: 1px solid #222; display: flex; justify-content: space-between;">
+    <span>VELOMATCH</span>
+    <span id="user-label" style="color: var(--primary);"></span>
 </header>
 
 <main>
     <section id="map-view" class="view active">
+        <div id="rec-info" class="recording-bar"><i class="fas fa-circle"></i> GRABANDO RUTA: <span id="dist">0</span> km</div>
         <div id="map"></div>
-        <button id="gps-btn" class="btn"><i class="fas fa-play"></i> COMPARTIR RUTA EN VIVO</button>
-        <div style="margin-top: 20px;">
-            <h3>Ciclistas en ruta</h3>
-            <div id="users-list" style="color: var(--dim); font-size: 0.9rem;">Buscando compañeros...</div>
+        <div style="display: flex; gap: 10px;">
+            <button id="gps-btn" class="btn btn-p" style="flex:1">GPS EN VIVO</button>
+            <button id="rec-btn" class="btn btn-s" style="flex:1"><i class="fas fa-play"></i> GRABAR</button>
         </div>
     </section>
 
     <section id="market-view" class="view">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin:0;">Market</h2>
-            <button onclick="toggleSell()" class="btn" style="width: auto; padding: 8px 15px;">+ Vender</button>
+        <button class="btn btn-p" onclick="toggleForm()">+ PUBLICAR VENTA</button>
+        <div id="market-form" style="display:none; margin-top:15px; background:var(--card); padding:15px; border-radius:15px;">
+            <input type="text" id="m-title" placeholder="¿Qué vendes?">
+            <input type="text" id="m-price" placeholder="Precio">
+            <input type="text" id="m-img" placeholder="Link de imagen">
+            <button class="btn btn-p" id="save-market">Publicar</button>
         </div>
-        
-        <div id="sell-form" style="display:none; background: var(--card); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-            <input type="text" id="p-title" placeholder="¿Qué vendes?">
-            <input type="text" id="p-price" placeholder="Precio ($)">
-            <input type="text" id="p-img" placeholder="URL de la imagen (ej: Unsplash)">
-            <button class="btn" id="post-btn">Publicar ahora</button>
-        </div>
-
-        <div class="market-grid" id="market-list">
-            </div>
+        <div id="market-list" style="margin-top: 20px;"></div>
     </section>
 
     <section id="chat-view" class="view">
-        <div class="chat-cont" id="chat-content"></div>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="chat-input" placeholder="Escribe a la grupeta...">
-            <button class="btn" id="send-btn" style="width: 60px;">➤</button>
+        <div id="chat-content" style="height: calc(100vh - 280px); overflow-y: auto; background:#000; padding:15px; border-radius:15px;"></div>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <input type="text" id="chat-input" placeholder="Escribe...">
+            <button class="btn btn-p" id="send-btn" style="width: 70px;">➤</button>
         </div>
     </section>
 </main>
 
 <nav class="nav">
-    <button class="nav-btn active" onclick="showView('map-view', this)"><i class="fas fa-map"></i><span>MAPA</span></button>
-    <button class="nav-btn" onclick="showView('market-view', this)"><i class="fas fa-store"></i><span>MARKET</span></button>
-    <button class="nav-btn" onclick="showView('chat-view', this)"><i class="fas fa-comments"></i><span>CHAT</span></button>
+    <button class="nav-i active" onclick="go('map-view', this)"><i class="fas fa-map"></i></button>
+    <button class="nav-i" onclick="go('market-view', this)"><i class="fas fa-store"></i></button>
+    <button class="nav-i" onclick="go('chat-view', this)"><i class="fas fa-comments"></i></button>
 </nav>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    import { getDatabase, ref, set, onValue, push, onChildAdded, update, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    const firebaseConfig = {
+    const config = {
         apiKey: "AIzaSyDux5GjU7Nbtok8d_uZ5HVMCYKuSiXHHCQ",
         databaseURL: "https://velomachone-default-rtdb.firebaseio.com",
-        projectId: "velomachone",
-        storageBucket: "velomachone.firebasestorage.app",
-        messagingSenderId: "993309414321",
-        appId: "1:993309414321:web:52d72f0b635bf48bec2390"
+        projectId: "velomachone"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp(config);
     const db = getDatabase(app);
-    let myName = "", myCountry = "", map, markers = {};
+    let myName, myCountry, map, markers = {}, pathLine, isRecording = false, routePoints = [], totalDist = 0;
 
-    // LOGIN
     document.getElementById('login-btn').onclick = () => {
         myName = document.getElementById('user-name').value;
         myCountry = document.getElementById('user-country').value;
-        if(!myName || !myCountry) return alert("Completa tus datos");
-        
+        if(!myName) return alert("Pon tu nombre");
         document.getElementById('login-modal').style.display = 'none';
-        document.getElementById('user-display').innerText = `${myName} ${myCountry}`;
-        initMap();
-        listenData();
+        document.getElementById('user-label').innerText = myName;
+        startApp();
     };
 
-    function initMap() {
-        if(map) return;
-        map = L.map('map', {zoomControl: false}).setView([0,0], 2);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        setTimeout(() => map.invalidateSize(), 500);
+    function startApp() {
+        if(!map) {
+            map = L.map('map', {zoomControl: false}).setView([0,0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            setTimeout(() => map.invalidateSize(), 500);
+        }
+        listenDB();
     }
 
-    window.showView = (id, btn) => {
+    window.go = (id, btn) => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.nav-i').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         btn.classList.add('active');
-        if(id === 'map-view' && map) setTimeout(() => map.invalidateSize(), 200);
+        if(id === 'map-view') setTimeout(() => map.invalidateSize(), 300);
     };
 
-    // GPS
-    document.getElementById('gps-btn').onclick = function() {
-        this.innerHTML = "GPS ACTIVADO";
-        this.style.background = "#fff";
+    // GPS & GRABACIÓN
+    document.getElementById('gps-btn').onclick = () => {
         navigator.geolocation.watchPosition(p => {
-            const pos = { lat: p.coords.latitude, lng: p.coords.longitude, country: myCountry };
-            set(ref(db, 'users/' + myName), pos);
-            map.setView([pos.lat, pos.lng], 15);
-            if(!markers[myName]) markers[myName] = L.circleMarker([pos.lat, pos.lng], {color: '#adff2f', radius: 8}).addTo(map);
-            else markers[myName].setLatLng([pos.lat, pos.lng]);
-        });
+            const pos = [p.coords.latitude, p.coords.longitude];
+            set(ref(db, 'users/' + myName), {lat: pos[0], lng: pos[1], country: myCountry});
+            map.setView(pos, 15);
+            if(!markers[myName]) markers[myName] = L.circleMarker(pos, {color: '#adff2f', radius: 7}).addTo(map);
+            else markers[myName].setLatLng(pos);
+
+            if(isRecording) {
+                routePoints.push(pos);
+                if(!pathLine) pathLine = L.polyline(routePoints, {color: '#ff4757'}).addTo(map);
+                else pathLine.setLatLngs(routePoints);
+                if(routePoints.length > 1) {
+                    let last = routePoints[routePoints.length - 2];
+                    totalDist += map.distance(last, pos) / 1000;
+                    document.getElementById('dist').innerText = totalDist.toFixed(2);
+                }
+            }
+        }, null, {enableHighAccuracy: true});
     };
 
-    // MARKETPLACE
-    window.toggleSell = () => {
-        const f = document.getElementById('sell-form');
+    document.getElementById('rec-btn').onclick = function() {
+        isRecording = !isRecording;
+        this.innerHTML = isRecording ? '<i class="fas fa-stop"></i> PARAR' : '<i class="fas fa-play"></i> GRABAR';
+        this.classList.toggle('btn-s');
+        this.style.background = isRecording ? '#ff4757' : '#222';
+        document.getElementById('rec-info').style.display = isRecording ? 'block' : 'none';
+        if(!isRecording) { routePoints = []; totalDist = 0; }
+    };
+
+    // MARKET & LIKES
+    window.toggleForm = () => {
+        const f = document.getElementById('market-form');
         f.style.display = f.style.display === 'none' ? 'block' : 'none';
     };
 
-    document.getElementById('post-btn').onclick = () => {
-        const title = document.getElementById('p-title').value;
-        const price = document.getElementById('p-price').value;
-        const img = document.getElementById('p-img').value || 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=200';
-        if(title && price) {
-            push(ref(db, 'market/'), { title, price, img, user: myName });
-            toggleSell();
-        }
+    document.getElementById('save-market').onclick = () => {
+        const title = document.getElementById('m-title').value;
+        const price = document.getElementById('m-price').value;
+        const img = document.getElementById('m-img').value || 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=300';
+        push(ref(db, 'market/'), { title, price, img, user: myName, likes: 0 });
+        toggleForm();
     };
 
-    function listenData() {
-        // Escuchar Usuarios
-        onValue(ref(db, 'users/'), (snap) => {
+    function listenDB() {
+        onChildAdded(ref(db, 'market/'), snap => {
+            const p = snap.val();
+            const div = document.createElement('div');
+            div.className = 'p-card';
+            div.innerHTML = `
+                <img src="${p.img}">
+                <button class="like-btn" onclick="like('${snap.key}')"><i class="fas fa-heart"></i> <span id="l-${snap.key}">${p.likes || 0}</span></button>
+                <h3>${p.title}</h3>
+                <span style="color:var(--primary)">$${p.price}</span> | <small>${p.user}</small>
+            `;
+            document.getElementById('market-list').prepend(div);
+        });
+
+        onValue(ref(db, 'users/'), snap => {
             const data = snap.val();
-            let html = "";
             for(let id in data) {
-                html += `<div>• ${id} (${data[id].country})</div>`;
                 if(id !== myName) {
                     if(!markers[id]) markers[id] = L.marker([data[id].lat, data[id].lng]).addTo(map).bindPopup(id);
                     else markers[id].setLatLng([data[id].lat, data[id].lng]);
                 }
             }
-            document.getElementById('users-list').innerHTML = html;
         });
 
-        // Escuchar Market
-        onChildAdded(ref(db, 'market/'), (data) => {
-            const p = data.val();
-            const list = document.getElementById('market-list');
-            list.innerHTML = `
-                <div class="p-card">
-                    <img src="${p.img}">
-                    <h4>${p.title}</h4>
-                    <span>$${p.price}</span><br>
-                    <small>Vendedor: ${p.user}</small>
-                </div>
-            ` + list.innerHTML;
-        });
-
-        // Escuchar Chat
-        onChildAdded(ref(db, 'chat/'), (data) => {
-            const m = data.val();
-            const cont = document.getElementById('chat-content');
-            cont.innerHTML += `<div class="msg"><b>${m.user}:</b> ${m.text}</div>`;
-            cont.scrollTop = cont.scrollHeight;
+        onChildAdded(ref(db, 'chat/'), snap => {
+            const m = snap.val();
+            document.getElementById('chat-content').innerHTML += `<div style="margin-bottom:8px"><b>${m.user}:</b> ${m.text}</div>`;
         });
     }
 
+    window.like = (key) => {
+        update(ref(db, `market/${key}`), { likes: increment(1) });
+        const el = document.getElementById(`l-${key}`);
+        el.innerText = parseInt(el.innerText) + 1;
+    };
+
     document.getElementById('send-btn').onclick = () => {
-        const input = document.getElementById('chat-input');
-        if(input.value) {
-            push(ref(db, 'chat/'), { user: myName, text: input.value });
-            input.value = "";
-        }
+        const i = document.getElementById('chat-input');
+        if(i.value) { push(ref(db, 'chat/'), { user: myName, text: i.value }); i.value = ""; }
     };
 </script>
 </body>
