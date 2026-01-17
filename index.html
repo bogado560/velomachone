@@ -25,7 +25,7 @@
     <div style="background: var(--card); padding: 30px; border-radius: 20px; width: 85%; max-width: 350px;">
         <h2 style="text-align: center;">🚲 VeloMatch</h2>
         <input type="text" id="user-name" placeholder="Tu nombre">
-        <button class="btn" onclick="startApp()">Entrar</button>
+        <button class="btn" id="login-btn">Entrar</button>
     </div>
 </div>
 
@@ -34,7 +34,7 @@
         <div id="map"></div>
         <div style="padding:15px; text-align: center;">
             <p>Usuarios activos: <b id="count">1</b></p>
-            <button id="gps-btn" class="btn" onclick="toggleGPS()">Compartir Ubicación</button>
+            <button id="gps-btn" class="btn">Compartir Ubicación</button>
         </div>
     </section>
 
@@ -42,54 +42,132 @@
         <div class="chat-box" id="chat-content"></div>
         <div style="display: flex; gap: 5px;">
             <input type="text" id="chat-input" placeholder="Mensaje...">
-            <button class="btn" style="width: 80px;" onclick="sendChat()">➤</button>
+            <button class="btn" id="send-btn" style="width: 80px;">➤</button>
         </div>
     </section>
 </main>
 
 <nav class="nav">
-    <button onclick="show('map-view')" style="background:none; border:none; color:white;"><i class="fas fa-map"></i></button>
-    <button onclick="show('chat-view')" style="background:none; border:none; color:white;"><i class="fas fa-comments"></i></button>
+    <button id="nav-map" style="background:none; border:none; color:white;"><i class="fas fa-map"></i></button>
+    <button id="nav-chat" style="background:none; border:none; color:white;"><i class="fas fa-comments"></i></button>
 </nav>
 
 <script type="module">
-    // Importamos las herramientas de Google
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    // 1. REEMPLAZA ESTO CON TUS DATOS REALES DE FIREBASE
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+    
+    // --- REEMPLAZA ESTO CON TUS DATOS ---
     const firebaseConfig = {
-        apiKey: "AIzaSyDux5GjU7Nbtok8d_uZ5HVMCYKuSiXHHCQ",
-        databaseURL: "https://velomachone-default-rtdb.firebaseio.com",
-        projectId: "velomachone",
-        storageBucket: "velomachone.firebasestorage.app",
-        messagingSenderId: "993309414321",
-        appId: "1:993309414321:web:52d72f0b635bf48bec2390"
-    };
+  apiKey: "AIzaSyDux5GjU7Nbtok8d_uZ5HVMCYKuSiXHHCQ",
+  authDomain: "velomachone.firebaseapp.com",
+  databaseURL: "https://velomachone-default-rtdb.firebaseio.com",
+  projectId: "velomachone",
+  storageBucket: "velomachone.firebasestorage.app",
+  messagingSenderId: "993309414321",
+  appId: "1:993309414321:web:52d72f0b635bf48bec2390"
+};
 
-    // Inicializamos
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    let db;
+    try {
+        const app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+    } catch (e) {
+        console.error("Error al conectar Firebase:", e);
+    }
+
     let myName = "";
+    let map, markers = {};
 
-    // FUNCIÓN PARA ENTRAR (Hacerla global para el botón)
-    window.startApp = function() {
-        const inputName = document.getElementById('user-name').value;
-        if(inputName.trim() === "") {
-            alert("Por favor, escribe un nombre");
+    // LOGIN
+    document.getElementById('login-btn').onclick = function() {
+        myName = document.getElementById('user-name').value;
+        if(myName.trim() === "") {
+            alert("Escribe un nombre.");
             return;
         }
-        
-        myName = inputName;
-        // Ocultar el modal de login
         document.getElementById('login-modal').style.display = 'none';
-        
-        // Iniciar funciones de la app
         initMap();
-        listenToUsers();
-        listenToChat();
-        console.log("Sesión iniciada como:", myName);
+        if(db) {
+            listenToUsers();
+            listenToChat();
+        } else {
+            alert("Atención: Firebase no está configurado. La app funcionará solo en modo local.");
+        }
     };
 
-    // ... (aquí seguiría el resto de las funciones: initMap, toggleGPS, etc.)
+    function initMap() {
+        if(!map) {
+            map = L.map('map').setView([0,0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        }
+    }
+
+    // GPS
+    document.getElementById('gps-btn').onclick = function() {
+        if(!navigator.geolocation) return alert("Tu navegador no soporta GPS.");
+        
+        navigator.geolocation.watchPosition(p => {
+            const pos = { lat: p.coords.latitude, lng: p.coords.longitude };
+            if(db) set(ref(db, 'users/' + myName), pos);
+            map.setView([pos.lat, pos.lng], 15);
+            
+            if(!markers[myName]) {
+                markers[myName] = L.marker([pos.lat, pos.lng]).addTo(map).bindPopup("Tú (" + myName + ")").openPopup();
+            } else {
+                markers[myName].setLatLng([pos.lat, pos.lng]);
+            }
+        }, err => alert("Error GPS: Activa la ubicación en tu celular"), {enableHighAccuracy: true});
+    };
+
+    // NAVEGACION
+    document.getElementById('nav-map').onclick = () => show('map-view');
+    document.getElementById('nav-chat').onclick = () => show('chat-view');
+
+    function show(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        if(map) map.invalidateSize();
+    }
+
+    // CHAT
+    document.getElementById('send-btn').onclick = function() {
+        const input = document.getElementById('chat-input');
+        if(input.value && db) {
+            push(ref(db, 'chat/'), { user: myName, text: input.value });
+            input.value = "";
+        } else if(!db) {
+            alert("No hay conexión con la base de datos.");
+        }
+    };
+
+    function listenToUsers() {
+        onValue(ref(db, 'users/'), (snapshot) => {
+            const data = snapshot.val();
+            let count = 0;
+            for(let id in data) {
+                count++;
+                if(id !== myName) {
+                    if(!markers[id]) markers[id] = L.marker([data[id].lat, data[id].lng]).addTo(map).bindPopup(id);
+                    else markers[id].setLatLng([data[id].lat, data[id].lng]);
+                }
+            }
+            document.getElementById('count').innerText = count;
+        });
+    }
+
+    function listenToChat() {
+        onChildAdded(ref(db, 'chat/'), (data) => {
+            const msg = data.val();
+            const content = document.getElementById('chat-content');
+            content.innerHTML += `<p><b>${msg.user}:</b> ${msg.text}</p>`;
+            content.scrollTop = content.scrollHeight;
+        });
+    }
 </script>
+</body>
+</html>
