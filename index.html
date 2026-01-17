@@ -3,135 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeloMatch Pro</title>
+    <title>VeloMatch RealTime</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --text: #ffffff; --primary: #adff2f; --accent: #ff4757; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; overflow: hidden; }
-        header { display: flex; justify-content: space-between; padding: 15px; background: var(--card); align-items: center; }
-        .view { display: none; height: calc(100vh - 140px); padding: 15px; overflow-y: auto; }
+        :root { --bg: #121212; --card: #1e1e1e; --text: #ffffff; --primary: #adff2f; }
+        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        .view { display: none; flex-grow: 1; padding: 15px; overflow-y: auto; }
         .view.active { display: flex; flex-direction: column; }
-        #map { flex-grow: 1; border-radius: 15px; background: #222; width: 100%; min-height: 300px; }
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; display: flex; align-items: center; justify-content: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #000; color: #fff; }
-        .btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
-        .chat-area { flex-grow: 1; background: #000; border-radius: 10px; padding: 10px; overflow-y: auto; margin-bottom: 10px; border: 1px solid #333; }
-        .nav { position: fixed; bottom: 0; width: 100%; height: 70px; background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #333; }
-        .nav button { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
-        .online-dot { height: 10px; width: 10px; background: #adff2f; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        #map { height: 400px; border-radius: 15px; background: #222; width: 100%; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 999; display: flex; align-items: center; justify-content: center; }
+        .btn { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; color: #000; cursor: pointer; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; background: #222; color: #fff; border: 1px solid #444; box-sizing: border-box; }
+        .nav { height: 70px; background: #000; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #333; }
+        .chat-box { flex-grow: 1; background: #000; border-radius: 10px; padding: 10px; overflow-y: auto; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div id="login-screen" class="modal">
-    <div style="background: var(--card); padding: 30px; border-radius: 20px; width: 80%; max-width: 350px; text-align: center;">
-        <h2>🚲 VeloMatch</h2>
-        <input type="text" id="username" placeholder="Tu nombre de ciclista">
-        <button class="btn" onclick="login()">Entrar a la ruta</button>
+<div id="login-modal" class="modal">
+    <div style="background: var(--card); padding: 30px; border-radius: 20px; width: 85%; max-width: 350px;">
+        <h2 style="text-align: center;">🚲 VeloMatch</h2>
+        <input type="text" id="user-name" placeholder="Tu nombre">
+        <button class="btn" onclick="startApp()">Entrar</button>
     </div>
 </div>
 
-<header>
-    <div><b>VELOMATCH</b></div>
-    <div id="status-bar"><span class="online-dot"></span> <span id="user-count">12</span> en línea</div>
-</header>
-
-<main>
-    <section id="dating" class="view active">
-        <div style="background: var(--card); border-radius: 20px; overflow: hidden;">
-            <img src="https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=500" style="width:100%; height:250px; object-fit:cover;">
-            <div style="padding:20px;">
-                <h3>Mariana, 27</h3>
-                <p>¿Alguien para ruta de 40km mañana?</p>
-                <button class="btn" onclick="openChat('Mariana')">Enviar Mensaje</button>
-            </div>
+<main style="flex-grow: 1; display: flex; flex-direction: column;">
+    <section id="map-view" class="view active">
+        <div id="map"></div>
+        <div style="padding:15px; text-align: center;">
+            <p>Usuarios activos: <b id="count">1</b></p>
+            <button id="gps-btn" class="btn" onclick="toggleGPS()">Compartir Ubicación</button>
         </div>
     </section>
 
     <section id="chat-view" class="view">
-        <h3 id="chat-with">Chat</h3>
-        <div class="chat-area" id="messages"></div>
-        <div style="display:flex; gap:5px;">
-            <input type="text" id="msg-input" placeholder="Escribe un mensaje...">
-            <button class="btn" style="width: 80px;" onclick="sendMsg()">Ir</button>
-        </div>
-    </section>
-
-    <section id="route" class="view">
-        <div id="map"></div>
-        <div style="margin-top:10px; display:flex; justify-content: space-between; align-items:center;">
-            <span>Km: <b id="km">0.0</b></span>
-            <button id="gps-btn" class="btn" style="width:auto;" onclick="toggleGPS()">Activar GPS</button>
+        <div class="chat-box" id="chat-content"></div>
+        <div style="display: flex; gap: 5px;">
+            <input type="text" id="chat-input" placeholder="Mensaje...">
+            <button class="btn" style="width: 80px;" onclick="sendChat()">➤</button>
         </div>
     </section>
 </main>
 
 <nav class="nav">
-    <button onclick="show('dating')"><i class="fas fa-users"></i></button>
-    <button onclick="show('route')"><i class="fas fa-map"></i></button>
-    <button onclick="show('chat-view')"><i class="fas fa-comments"></i></button>
+    <button onclick="show('map-view')" style="background:none; border:none; color:white;"><i class="fas fa-map"></i></button>
+    <button onclick="show('chat-view')" style="background:none; border:none; color:white;"><i class="fas fa-comments"></i></button>
 </nav>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-    let map, marker, watchId, path = [];
-    
-    function login() {
-        const name = document.getElementById('username').value;
-        if(name) {
-            document.getElementById('login-screen').style.display = 'none';
-            alert("¡Bienvenido " + name + "!");
-        }
-    }
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    function show(id) {
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        if(id === 'route') {
-            setTimeout(() => { if(!map) initMap(); map.invalidateSize(); }, 200);
-        }
-    }
+    // npm install firebase
+    // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-    function initMap() {
-        map = L.map('map').setView([0,0], 2);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    }
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDux5GjU7Nbtok8d_uZ5HVMCYKuSiXHHCQ",
+  authDomain: "velomachone.firebaseapp.com",
+  databaseURL: "https://velomachone-default-rtdb.firebaseio.com",
+  projectId: "velomachone",
+  storageBucket: "velomachone.firebasestorage.app",
+  messagingSenderId: "993309414321",
+  appId: "1:993309414321:web:52d72f0b635bf48bec2390"
+};
 
-    function toggleGPS() {
-        const btn = document.getElementById('gps-btn');
-        if (!watchId) {
-            btn.innerText = "Buscando...";
-            watchId = navigator.geolocation.watchPosition(p => {
-                const pos = [p.coords.latitude, p.coords.longitude];
-                if(!marker) marker = L.marker(pos).addTo(map);
-                marker.setLatLng(pos);
-                map.setView(pos, 15);
-                btn.innerText = "Grabando";
-                btn.style.background = "red";
-            }, err => alert("Error: Activa el GPS de tu celular"), {enableHighAccuracy: true});
-        } else {
-            navigator.geolocation.clearWatch(watchId);
-            watchId = null;
-            btn.innerText = "Activar GPS";
-            btn.style.background = "#adff2f";
-        }
-    }
-
-    function openChat(name) {
-        document.getElementById('chat-with').innerText = "Chat con " + name;
-        show('chat-view');
-    }
-
-    function sendMsg() {
-        const input = document.getElementById('msg-input');
-        if(input.value) {
-            const box = document.getElementById('messages');
-            box.innerHTML += `<p><b>Tú:</b> ${input.value}</p>`;
-            input.value = "";
-            box.scrollTop = box.scrollHeight;
-        }
-    }
-</script>
-</body>
-</html>
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
