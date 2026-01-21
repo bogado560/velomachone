@@ -324,3 +324,18 @@
 </script>
 </body>
 </html>
+document.getElementById('gps-trigger').onclick = () => {
+    // Esto fuerza al navegador a pedir permiso
+    navigator.geolocation.getCurrentPosition(p => {
+        const pos = [p.coords.latitude, p.coords.longitude];
+        set(ref(db, 'users/' + user), {lat: pos[0], lng: pos[1]});
+        map.setView(pos, 15);
+        if(markers[user]) markers[user].setLatLng(pos);
+        else markers[user] = L.circleMarker(pos, {color: '#adff2f', radius: 10, fillOpacity: 1}).addTo(map);
+        
+        document.getElementById('gps-trigger').innerText = "GPS CONECTADO ✓";
+        document.getElementById('gps-trigger').style.background = "#fff";
+    }, (e) => {
+        alert("Por favor, ve a los ajustes de tu navegador y permite la ubicación para esta página.");
+    }, {enableHighAccuracy: true, timeout: 5000});
+};
